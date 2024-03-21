@@ -1,0 +1,18 @@
+version: "3"
+services:
+    avaya_db:
+        image: mysql:5.7
+        restart: unless-stopped
+        environment:
+          MYSQL_ROOT_PASSWORD: somepassword
+          MYSQL_DATABASE: AvayaCdr
+          MYSQL_USER: cdruser
+          MYSQL_PASSWORD: averysecurepasswordforever
+          TZ: Australia/Melbourne
+        ports:
+            - "3306:3306"
+        volumes:
+          # mysql container will run any .sql scripts found in /docker-entrypoint...
+            - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+            - ./data:/var/lib/mysql
+            #- /etc/localtime:/etc/localtime
