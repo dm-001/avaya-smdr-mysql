@@ -1,7 +1,7 @@
 create database if not exists `AvayaCdr`;
 GRANT ALL ON `AvayaCdr`.* TO 'cdruser'@'%';
 USE AvayaCdr;
-CREATE TABLE `cdr` (
+CREATE TABLE if not exists `cdr` (
 `id` INT(10) NOT NULL AUTO_INCREMENT,
 `CallStart` DATETIME NULL DEFAULT NULL,
 `ConnectedTime` TIME NULL DEFAULT NULL,

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 
 	"database/sql"
 
@@ -27,8 +28,6 @@ func main() {
 	if err != nil {
 		fmt.Println("could not open database connection -", err)
 		return
-	} else {
-		db.Ping()
 	}
 
 	// Create a buffer to store any received data
@@ -39,9 +38,17 @@ func main() {
 		_, err = conn.Read(received)
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(1)
+			break
 		}
-		fmt.Println(string(received))
+		// Split smdr data in to individual elements, trim whitespace
+		smdr := strings.Split(string(received), ",")
+		for i := range smdr {
+			smdr[i] = strings.TrimSpace(smdr[i])
+		}
+
+		// Write call data to the SQL database
+		go writeToDatabase(smdr, db)
+
 	}
 
 	conn.Close()
@@ -95,5 +102,16 @@ func connectToPBX(host, port string) (*net.TCPConn, error) {
 	}
 
 	return conn, nil
+
+}
+
+// Write  big old slice of cdr values to the database, filtering for only the data we care about
+func writeToDatabase(callData []string, sqldb *sql.DB) {
+
+	execString := "INSERT INTO cdr (CallStart,ConnectedTime,RingTime,Caller,Direction,CalledNumber,DialledNumber,IsInternal,CallID,HoldTime,ParkTime,ExternalTargetingCause,ExternalTargeterId,ExternalTargetedNumber,CallerServerIP,UniqueCallIDCallerExtension,UniqueCallIDCalledParty,SMDRRecordingTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	_, err := sqldb.Exec(execString, callData[0], callData[1], callData[2], callData[3], callData[4], callData[5], callData[6], callData[8], callData[9], callData[15], callData[16], callData[27], callData[28], callData[29], callData[30], callData[31], callData[33], callData[34])
+	if err != nil {
+		fmt.Println(err)
+	}
 
 }
