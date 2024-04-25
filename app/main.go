@@ -30,10 +30,10 @@ func main() {
 		return
 	}
 
-	// Create a buffer to store any received data
-	received := make([]byte, 4096)
-
 	for {
+		// Create a buffer to store any received data
+		received := make([]byte, 4096)
+
 		// Read data from the connection until an EOF/Null is read
 		_, err = conn.Read(received)
 		if err != nil {
