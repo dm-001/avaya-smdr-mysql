@@ -8,6 +8,8 @@ services:
           MYSQL_USER: cdruser
           MYSQL_PASSWORD: averysecurepasswordforever
           TZ: Australia/Melbourne
+          #MYSQL_INITDB_SKIP_TZINFO: true
+        command: mysqld --sql_mode=""
         ports:
             - "3306:3306"
         volumes:
@@ -16,14 +18,17 @@ services:
             - /etc/localtime:/etc/localtime
 
     avaya_smdr:
-        build: ./go
+        build: ./app
         restart: unless-stopped
         depends_on: 
           - avaya_db
         environment:
+          LISTEN_PORT: 3000
           DB_USER: cdruser
           DB_PASSWORD: averysecurepasswordforever
           DB_ADDRESS: "avaya_db:3306"
           TZ: Australia/Melbourne
+        ports:
+            - "3000:3000"          
         volumes:
           - /etc/localtime:/etc/localtime

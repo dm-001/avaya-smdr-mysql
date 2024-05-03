@@ -11,18 +11,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-const (
-	HOST = "10.10.5.6"
-	PORT = "3000"
-	TYPE = "tcp"
-)
-
 func main() {
-
-	conn, err := connectToPBX(HOST, PORT)
-	if err != nil {
-		fmt.Println("could not connect to PBXD -", err)
-	}
 
 	db, err := connectToDatabase()
 	if err != nil {
@@ -30,28 +19,27 @@ func main() {
 		return
 	}
 
-	for {
-		// Create a buffer to store any received data
-		received := make([]byte, 4096)
+	// Get port number from env vars
+	targetPort := os.Getenv("LISTEN_PORT")
 
-		// Read data from the connection until an EOF/Null is read
-		_, err = conn.Read(received)
+	listener, err := listenOnPort(":" + targetPort)
+	if err != nil {
+		fmt.Println("could not bind to port:", err)
+		return
+	}
+
+	for {
+		// Wait for and accept a connection on the port listener
+		conn, err := listener.Accept()
 		if err != nil {
 			fmt.Println(err)
-			break
+		} else {
+			// Handle the connection in a goroutine so more can be accepted
+			go handleConnection(conn, db)
 		}
-		// Split smdr data in to individual elements, trim whitespace
-		smdr := strings.Split(string(received), ",")
-		for i := range smdr {
-			smdr[i] = strings.TrimSpace(smdr[i])
-		}
-
-		// Write call data to the SQL database
-		go writeToDatabase(smdr, db)
 
 	}
 
-	conn.Close()
 }
 
 func connectToDatabase() (*sql.DB, error) {
@@ -65,6 +53,8 @@ func connectToDatabase() (*sql.DB, error) {
 		DBName:               "AvayaCdr",
 		AllowNativePasswords: true,
 	}
+
+	// Determine port to listen on
 
 	// Get a database handle.
 	db, err := sql.Open("mysql", cfg.FormatDSN())
@@ -84,24 +74,15 @@ func connectToDatabase() (*sql.DB, error) {
 
 }
 
-// Returns a TCP connection interface for the specified PBX ip and port
-func connectToPBX(host, port string) (*net.TCPConn, error) {
+func listenOnPort(port string) (net.Listener, error) {
 
-	// Make sure PBX address can be resolved
-	tcpServer, err := net.ResolveTCPAddr("tcp", host+":"+port)
+	listener, err := net.Listen("tcp4", port)
 	if err != nil {
-		fmt.Println("could not resolve PBX address -", err)
+		fmt.Println("error establishing listener on port: ", err)
 		return nil, err
 	}
-
-	// Make a basic TCP connection to the PBX SMDR port
-	conn, err := net.DialTCP("tcp", nil, tcpServer)
-	if err != nil {
-		fmt.Println("could not connect to PBX smdr port -", err)
-		return nil, err
-	}
-
-	return conn, nil
+	fmt.Println("Listening for SMDR data on: ", port)
+	return listener, nil
 
 }
 
@@ -113,5 +94,35 @@ func writeToDatabase(callData []string, sqldb *sql.DB) {
 	if err != nil {
 		fmt.Println(err)
 	}
+
+}
+
+func handleConnection(conn net.Conn, db *sql.DB) error {
+
+	// Create a buffer to store any received data
+	received := make([]byte, 4096)
+
+	// Read data from the connection until an EOF/Null is read
+	_, err := conn.Read(received)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	// Split smdr data in to individual elements, trim whitespace and newlines
+	smdr := strings.Split(string(received), ",")
+	for i := range smdr {
+		smdr[i] = strings.TrimSpace(smdr[i])
+		smdr[i] = strings.Replace(smdr[i], "\r\n", "", -1)
+	}
+
+	// Debug
+	//fmt.Println("RAW:  ", string(received))
+
+	// Write call data to the SQL database
+	go writeToDatabase(smdr, db)
+	conn.Close()
+
+	return nil
 
 }

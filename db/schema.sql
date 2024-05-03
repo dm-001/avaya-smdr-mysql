@@ -20,6 +20,6 @@ CREATE TABLE if not exists `cdr` (
 `CallerServerIP` VARCHAR(60) NULL DEFAULT '',
 `UniqueCallIDCallerExtension` VARCHAR(50) NULL DEFAULT '',
 `UniqueCallIDCalledParty` VARCHAR(50) NULL DEFAULT '',
-`SMDRRecordingTime` DATETIME DEFAULT NULL,
+`SMDRRecordingTime` DATETIME NULL DEFAULT NULL,
 PRIMARY KEY (`id`)
 );
