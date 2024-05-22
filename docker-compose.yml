@@ -8,7 +8,6 @@ services:
           MYSQL_USER: cdruser
           MYSQL_PASSWORD: averysecurepasswordforever
           TZ: Australia/Melbourne
-          #MYSQL_INITDB_SKIP_TZINFO: true
         command: mysqld --sql_mode=""
         ports:
             - "3306:3306"

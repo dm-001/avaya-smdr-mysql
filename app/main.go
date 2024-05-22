@@ -34,7 +34,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			// Handle the connection in a goroutine so more can be accepted
+			// Handle the connection in a goroutine so more can be accepted straight away
 			go handleConnection(conn, db)
 		}
 
@@ -53,8 +53,6 @@ func connectToDatabase() (*sql.DB, error) {
 		DBName:               "AvayaCdr",
 		AllowNativePasswords: true,
 	}
-
-	// Determine port to listen on
 
 	// Get a database handle.
 	db, err := sql.Open("mysql", cfg.FormatDSN())
@@ -78,7 +76,7 @@ func listenOnPort(port string) (net.Listener, error) {
 
 	listener, err := net.Listen("tcp4", port)
 	if err != nil {
-		fmt.Println("error establishing listener on port: ", err)
+		fmt.Println("error establishing listener on port", port, err)
 		return nil, err
 	}
 	fmt.Println("Listening for SMDR data on: ", port)
@@ -115,9 +113,6 @@ func handleConnection(conn net.Conn, db *sql.DB) error {
 		smdr[i] = strings.TrimSpace(smdr[i])
 		smdr[i] = strings.Replace(smdr[i], "\r\n", "", -1)
 	}
-
-	// Debug
-	//fmt.Println("RAW:  ", string(received))
 
 	// Write call data to the SQL database
 	go writeToDatabase(smdr, db)
